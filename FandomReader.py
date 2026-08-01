@@ -7,7 +7,6 @@ This will send a request to fandom to grab the html on the page, using selenium,
 With this, we just need all the table and data nested within it, the rest can be deleted
 
 Packages:
-request: https://pypi.org/project/requests/
 selenium: https://pypi.org/project/selenium/ - used to automate the process connecting to the web
 beautifulsoup: http://pypi.org/project/beautifulsoup4/
 '''
@@ -117,7 +116,65 @@ class Logger():
     def __write_special_log(self, text_list:list, subject:str):
         self.create_open_file(f"{subject}.txt", "/info_output/", text_list)
 
+'''
+    This class handles all user input within the program
+'''
+class InputHandler():
+    '''
+        As the program handles one option per request, it is assumed the user output is one output.
+        input_hint should be lowercase to standardise the process
+    '''
+    def handle_input(self, input_hint: str, desired_output: list) -> str:
+        user_output = ""
+        if desired_output != []:
+            while user_output.lower() not in desired_output:
+                user_output = input(input_hint)
+            return user_output
+        else:
+            while user_output == "":
+                user_output = input(input_hint)
+            return user_output
+
+    '''
+    Dynamic build a string if required
+    '''
+    def build_string(self, pre: str, content:list, end: str) -> str:
+        feh = pre 
+        for string in content:
+            feh = f"{feh} {string},"
+        return f"{feh} {end}"
+
 Action_Logger = Logger()
+Input_Handler = InputHandler()
+
+
+ELEMENT_HINT = "Select your desired target element ( "
+ACCEPTED_HTML_ELEMENTS = ["table", "body", "div", "a", "ol", "li"]
+NESTED_ELEMENTS = ["table"]
+NESTED_TABLE_ELEMENTS = ["th", "tr"]
+NESTED_HINT = "Your chosen element is nested, would you like to go deeper (Y/N): "
+END_HINT = "html ): "
+
+
+
+ASK_FOR_CLASS = "Is there a class that you would want to be selected (Y/N): "
+ASK_WHAT_CLASS = "What class would you like to select: "
+YES_NO = ["y", "n"]
+
+
+full_element_hint = Input_Handler.build_string(ELEMENT_HINT, ACCEPTED_HTML_ELEMENTS, END_HINT)
+element = Input_Handler.handle_input(full_element_hint, ACCEPTED_HTML_ELEMENTS)
+nested_element = "" 
+if element in NESTED_ELEMENTS:
+    deep_search = True if Input_Handler.handle_input(NESTED_HINT, YES_NO) == "y" else False if Input_Handler.handle_input(ASK_FOR_CLASS, YES_NO) == "n" else False
+    if deep_search:
+        full_nested_element_hint = Input_Handler.build_string(ELEMENT_HINT, NESTED_TABLE_ELEMENTS, END_HINT)
+        nested_element = Input_Handler.handle_input(full_nested_element_hint, NESTED_TABLE_ELEMENTS)
+
+is_class = True if Input_Handler.handle_input(ASK_FOR_CLASS, YES_NO) == "y" else False if Input_Handler.handle_input(ASK_FOR_CLASS, YES_NO) == "n" else False 
+user_class = ""
+if is_class:
+    user_class = Input_Handler.handle_input(ASK_WHAT_CLASS, [])
 
 current_driver = setup_chrome_drivers()
 soup = request_page_html(FULL_STRING, current_driver)
@@ -137,10 +194,12 @@ current_driver = setup_chrome_drivers()
 current_driver.get(current_URL)
 delay_request(DELAY)
 new_soup = BeautifulSoup(current_driver.page_source, 'html.parser')
-va = new_soup.find(ELEMENT, class_="wikitable mw-collapsible mw-made-collapsible")
-if va != None:
-    for th in va.find_all("th"):
+va = new_soup.find(element, class_=user_class)
+if va != None and nested_element != "":
+    for th in va.find_all(nested_element):
         print(th.text)
         Action_Logger.add_info(th.text, current_URL)
+else:
+    print("No info to print")
 
 current_driver.quit()
