@@ -67,7 +67,7 @@ def end_chrome_driver_session(driver):
 '''
 def get_current_time():
     current_timestamp = datetime.datetime.now()
-    return current_timestamp
+    return str(current_timestamp)
 
 """
 This logger class handles file I/O while documenting actions to ensure the program is running smoothly (will be particularly helpful for user input)
@@ -89,9 +89,9 @@ class Logger():
     '''
     def create_open_file(self, file_name:str, location_dir: str, list: list):
         try:
-            with open(f"{location_dir}{file_name}", "x") as file_log:
-                for line in list:
-                    file_log.write(line)
+            print(file_name)
+            with open(file_name, "a") as file_log:
+                    file_log.write(list[-1])
         except:
             print("The latest log file failed, please try again.")
 
@@ -112,9 +112,10 @@ class Logger():
         __write_special_log writes the desired output of the system to a file.
     '''
     def __write_special_log(self, text_list:list, subject:str):
-        self.create_open_file(f"{subject}.txt", "/info_output/", text_list)
+        self.create_open_file("output.txt", "/info_output/", text_list)
 
 '''
+
     This class handles all user input within the program
 '''
 class InputHandler():
