@@ -122,6 +122,13 @@ class InputHandler():
         As the program handles one option per request, it is assumed the user output is one output.
         input_hint should be lowercase to standardise the process
     '''
+    def __init__(self) -> None:
+        self.__current_wiki = ""
+    def get_current_wiki(self) -> str:
+        return self.__current_wiki
+    def set_current_wiki(self, current_wiki:str) -> None:
+        self.__current_wiki = current_wiki 
+
     def handle_input(self, input_hint: str, desired_output: list) -> str:
         user_output = ""
         if desired_output != []:
@@ -143,11 +150,17 @@ class InputHandler():
         while title_check == "" or title_check == FANDOM_NOT_FOUND:
             user_output = self.handle_input(hint, [])
             user_fandom = f"https://{user_output}.fandom.com/{END}"
+
+            self.set_current_wiki(user_fandom)
+
             current_driver = setup_chrome_drivers()
             soup = request_page_html(user_fandom, current_driver)
             title_check = current_driver.title
             end_chrome_driver_session(current_driver)
         return soup
+
+    def display_disclaimer(self, disclaimer_text:str):
+            print(f"\n!INFO!\n------- \n{disclaimer_text}\n------\n")
     '''
     Dynamic build a string if required
     '''
@@ -157,10 +170,12 @@ class InputHandler():
             feh = f"{feh} {string},"
         return f"{feh} {end}"
 
+
 Action_Logger = Logger()
 Input_Handler = InputHandler()
 
 FANDOM_HINT = "Please type the Fandom (the part before .fandom) that you want to read: "
+ALLPAGES_HINT = "Please enter a substring, if you wish to search all pages, then enter N/A: "
 
 ELEMENT_HINT = "Select your desired target element ( "
 ACCEPTED_HTML_ELEMENTS = ["table", "body", "div", "a", "ol", "li"]
@@ -174,6 +189,9 @@ ASK_WHAT_CLASS = "What class would you like to select: "
 YES_NO = ["y", "n"]
 
 soup = Input_Handler.handle_user_request(FANDOM_HINT)
+Input_Handler.display_disclaimer(f"The selected wiki [{Input_Handler.get_current_wiki()}] found a {END} page, \nto decrease the time it takes to read all pages, \nthe following prompt will ask for a substring of desired pages, \nplease enter one if applicable")
+all_pages = Input_Handler.handle_input(ALLPAGES_HINT, [])
+
 
 full_element_hint = Input_Handler.build_string(ELEMENT_HINT, ACCEPTED_HTML_ELEMENTS, END_HINT)
 element = Input_Handler.handle_input(full_element_hint, ACCEPTED_HTML_ELEMENTS)
@@ -191,9 +209,9 @@ if is_class:
 
 valid_links = []
 for link in soup.find_all('a'):
-    if TYPE == "": 
+    if all_pages == "" or all_pages == "n/a": 
         valid_links.append(link.get('href'))
-    elif TYPE in str(link):
+    elif all_pages in str(link):
         valid_links.append(link.get('href')) if INCLUDE_GALLERY_PAGES else valid_links.append(link.get('href')) if not INCLUDE_GALLERY_PAGES and GALLERY_TEXT not in str(link) else print("Not a valid link")
 
 # check
