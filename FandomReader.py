@@ -17,15 +17,12 @@ from bs4 import BeautifulSoup
 
 import time
 import datetime
-import re # keeping this here in case a new to find partial expressions
+import re # keeping this here in case a new need to find partial expressions
 
 DELAY = 2 # 2 seconds
 CLOUDFLARE_DELAY = 35
 
-WIKI_TYPE = "atos"
 END = "/wiki/Special:AllPages"
-FANDOM_SPECIAL = f"https://{WIKI_TYPE}.fandom.com"
-FULL_STRING = f"{FANDOM_SPECIAL}/{END}"
 
 INCLUDE_GALLERY_PAGES = False
 GALLERY_TEXT = "/Gallery"
@@ -34,6 +31,7 @@ TYPE = "Citadel_of_" # the substring of the type of page you want | use "" to ke
 
 ELEMENT = "table"
 
+FANDOM_NOT_FOUND = "This wiki does not exist | | Fandom"
 '''
     delay_request will pause actions for a desired amount of time (time_delay)
 '''
@@ -127,14 +125,29 @@ class InputHandler():
     def handle_input(self, input_hint: str, desired_output: list) -> str:
         user_output = ""
         if desired_output != []:
-            while user_output.lower() not in desired_output:
-                user_output = input(input_hint)
+            while user_output not in desired_output:
+                user_output = input(input_hint).lower()
             return user_output
         else:
             while user_output == "":
                 user_output = input(input_hint)
             return user_output
 
+    '''
+        This will handle user request to ensure that they are targeting a valid fandom page.
+    '''
+    def handle_user_request(self, hint:str):
+        user_output = ""
+        title_check = "" # this is currently volatile because if fandom changes the title structure this does not work
+        soup = ""
+        while title_check == "" or title_check == FANDOM_NOT_FOUND:
+            user_output = self.handle_input(hint, [])
+            user_fandom = f"https://{user_output}.fandom.com/{END}"
+            current_driver = setup_chrome_drivers()
+            soup = request_page_html(user_fandom, current_driver)
+            title_check = current_driver.title
+            end_chrome_driver_session(current_driver)
+        return soup
     '''
     Dynamic build a string if required
     '''
@@ -147,6 +160,7 @@ class InputHandler():
 Action_Logger = Logger()
 Input_Handler = InputHandler()
 
+FANDOM_HINT = "Please type the Fandom (the part before .fandom) that you want to read: "
 
 ELEMENT_HINT = "Select your desired target element ( "
 ACCEPTED_HTML_ELEMENTS = ["table", "body", "div", "a", "ol", "li"]
@@ -155,12 +169,11 @@ NESTED_TABLE_ELEMENTS = ["th", "tr"]
 NESTED_HINT = "Your chosen element is nested, would you like to go deeper (Y/N): "
 END_HINT = "html ): "
 
-
-
 ASK_FOR_CLASS = "Is there a class that you would want to be selected (Y/N): "
 ASK_WHAT_CLASS = "What class would you like to select: "
 YES_NO = ["y", "n"]
 
+soup = Input_Handler.handle_user_request(FANDOM_HINT)
 
 full_element_hint = Input_Handler.build_string(ELEMENT_HINT, ACCEPTED_HTML_ELEMENTS, END_HINT)
 element = Input_Handler.handle_input(full_element_hint, ACCEPTED_HTML_ELEMENTS)
@@ -176,9 +189,6 @@ user_class = ""
 if is_class:
     user_class = Input_Handler.handle_input(ASK_WHAT_CLASS, [])
 
-current_driver = setup_chrome_drivers()
-soup = request_page_html(FULL_STRING, current_driver)
-end_chrome_driver_session(current_driver)
 valid_links = []
 for link in soup.find_all('a'):
     if TYPE == "": 
