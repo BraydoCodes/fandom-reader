@@ -36,48 +36,53 @@ CAP = 3
 TARGET_OUTPUT_FILE = "output.txt"
 
 '''
-    delay_request will pause actions for a desired amount of time (time_delay)
+    The manager class handles actions regarding page connection
 '''
-def delay_request(time_delay: int) -> None:
-    time.sleep(time_delay) 
+class Manager():
+    '''
+        delay_request will pause actions for a desired amount of time (time_delay)
+    '''
+    def delay_request(self, time_delay: int) -> None:
+        time.sleep(time_delay) 
 
-'''
-    setup_chrome_drivers will create the webdrivers to start the scraping process
-'''
-def setup_chrome_drivers():
-    options = webdriver.ChromeOptions()
-    driver = webdriver.Chrome(options=options)
-    return driver
+    '''
+        setup_chrome_drivers will create the webdrivers to start the scraping process
+    '''
+    def setup_chrome_drivers(self):
+        options = webdriver.ChromeOptions()
+        driver = webdriver.Chrome(options=options)
+        return driver
 
-'''
-    request_page_html will grab the html source and return a 'soupified' version using Beautiful Soup
-'''
-def request_page_html(page_url: str, driver):
-    driver.get(page_url)
-    html_soupified = BeautifulSoup(driver.page_source, 'html.parser') 
-    return html_soupified
+    '''
+        request_page_html will grab the html source and return a 'soupified' version using Beautiful Soup
+    '''
+    def request_page_html(self, page_url: str, driver):
+        driver.get(page_url)
+        html_soupified = BeautifulSoup(driver.page_source, 'html.parser') 
+        return html_soupified
 
-'''
-    end_chrome_driver_session will stop the current web driver
-'''
-def end_chrome_driver_session(driver):
-    delay_request(DELAY)
-    driver.quit()
-    del driver
+    '''
+        end_chrome_driver_session will stop the current web driver
+    '''
+    def end_chrome_driver_session(self, driver):
+        self.delay_request(DELAY)
+        driver.quit()
+        del driver
 
-'''
-    get_current_time returns the current date and time
-'''
-def get_current_time():
-    current_timestamp = datetime.datetime.now()
-    return str(current_timestamp)
+    '''
+        get_current_time returns the current date and time
+    '''
+    def get_current_time(self):
+        current_timestamp = datetime.datetime.now()
+        return str(current_timestamp)
 
 '''
     The file manager class manages all related input and output
 '''
 class FileManager():
-        def __init__(self) -> None:
+        def __init__(self, manager:Manager) -> None:
             self.__full_output_list = []
+            self.__manager = manager
         '''
             add_info that appends text to a special log, designed to be the desired output of the system.
         '''
@@ -93,7 +98,10 @@ class FileManager():
     
         def clear_text_file(self, target_name: str):
             with open(target_name, "w") as file_log:
-                file_log.write(f"{get_current_time()}\n")
+                file_log.write(f"{self.__manager.get_current_time()}\n")
+        def grab_time_stamp(self):
+            return self.__manager.get_current_time()
+        
         '''
             create_open_file is a function that opens, or creates a new .txt file, which it writes all the lines from iterating a list called list.
         '''
@@ -108,7 +116,7 @@ class FileManager():
 
 
 """
-This logger class handles documenting actions to ensure the program is running smoothly (will be particularly helpful for user input)
+    The logger class handles documenting actions to ensure the program is running smoothly (will be particularly helpful for user input)
 """
 class Logger():
     def __init__(self, file_manager: FileManager) -> None:
@@ -119,7 +127,7 @@ class Logger():
     add_log is a function that appends a message and timestamps it
     '''
     def add_log(self, text:str):
-        log_text = f"Log Action: {get_current_time} - {text}"
+        log_text = f"Log Action: {self.__file_manager.grab_time_stamp()} - {text}"
         self.__full_logs.append(log_text)
 
 
@@ -127,20 +135,21 @@ class Logger():
         write_log is a function that is designed for timestamp sensitive logs.
     '''
     def write_log(self):
-        self.__file_manager.create_open_file(f"/logs/{get_current_time}_fandom_log.txt", self.__full_logs)
+        self.__file_manager.create_open_file(f"/logs/{self.__file_manager.grab_time_stamp()}_fandom_log.txt", self.__full_logs)
 
 
 
 '''
-    This class handles all user input within the program
+    The input handler class handles all user input within the program
 '''
 class InputHandler():
     '''
         As the program handles one option per request, it is assumed the user output is one output.
         input_hint should be lowercase to standardise the process
     '''
-    def __init__(self) -> None:
+    def __init__(self, manager: Manager) -> None:
         self.__current_wiki = ""
+        self.__manager = manager
     def get_current_wiki(self) -> str:
         return self.__current_wiki
     def set_current_wiki(self, current_wiki:str) -> None:
@@ -170,10 +179,10 @@ class InputHandler():
 
             self.set_current_wiki(user_fandom)
 
-            current_driver = setup_chrome_drivers()
-            soup = request_page_html(f"{user_fandom}{END}", current_driver)
+            current_driver = self.__manager.setup_chrome_drivers()
+            soup = self.__manager.request_page_html(f"{user_fandom}{END}", current_driver)
             title_check = current_driver.title
-            end_chrome_driver_session(current_driver)
+            self.__manager.end_chrome_driver_session(current_driver)
         return soup
 
     def display_disclaimer(self, disclaimer_text:str):
@@ -193,13 +202,13 @@ class InputHandler():
         else:
             return f"https://{fandom}.fandom.com"
 
-
-File_Handler = FileManager()
+Program_Manager = Manager()
+File_Handler = FileManager(manager=Program_Manager)
 Action_Logger = Logger(file_manager=File_Handler)
-File_Handler.clear_text_file(TARGET_OUTPUT_FILE)
-Input_Handler = InputHandler()
+Input_Handler = InputHandler(manager=Program_Manager)
+File_Handler.clear_text_file(TARGET_OUTPUT_FILE) # remove this line if you want the output to stack
 
-FANDOM_HINT = "Please type the Fandom (the part before .fandom) that you want to read: "
+FANDOM_HINT = "Please type the Fandom (the part before .fandom) that you want to read: "#
 ALLPAGES_HINT = "Please enter a substring, if you wish to search all pages, then enter N/A: "
 
 ELEMENT_HINT = "Select your desired target element ( "
@@ -249,8 +258,8 @@ full_output = []
 for href in valid_links:
     if url_cap < CAP:
         current_URL = Input_Handler.build_url(href)
-        current_driver = setup_chrome_drivers()
-        delay_request(DELAY)
+        current_driver = Program_Manager.setup_chrome_drivers()
+        Program_Manager.delay_request(DELAY)
         current_driver.get(current_URL)
         new_soup = BeautifulSoup(current_driver.page_source, 'html.parser')
         target_element = new_soup.find(element, class_=user_class)
