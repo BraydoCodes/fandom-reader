@@ -18,6 +18,7 @@ from bs4 import BeautifulSoup
 import time
 import datetime
 import re # keeping this here in case a new need to find partial expressions
+import csv
 
 DELAY = 2 # 2 seconds
 CLOUDFLARE_DELAY = 35
@@ -33,7 +34,8 @@ ELEMENT = "table"
 
 FANDOM_NOT_FOUND = "This wiki does not exist | | Fandom"
 CAP = 3
-TARGET_OUTPUT_FILE = "output.txt"
+TARGET_OUTPUT_FILE = "output"
+CSV_OUTPUT_MODE = True
 
 '''
     The manager class handles actions regarding page connection
@@ -86,7 +88,7 @@ class FileManager():
         '''
             add_info that appends text to a special log, designed to be the desired output of the system.
         '''
-        def add_all_info(self, info_list:list):
+        def add_all_info(self, info_list:list[list]):
             self.__full_output_list = info_list
             self.__write_output(self.__full_output_list)
     
@@ -103,13 +105,23 @@ class FileManager():
             return self.__manager.get_current_time()
         
         '''
-            create_open_file is a function that opens, or creates a new .txt file, which it writes all the lines from iterating a list called list.
+            create_open_file is a function that opens, or creates a new .txt or .csv file, which it writes all the lines from iterating a list called content_list.
         '''
-        def create_open_file(self, file_name:str, content_list: list):
+        def create_open_file(self, file_name:str, content_list: list[list], csv_mode:bool = CSV_OUTPUT_MODE):
             try:
-                with open(file_name, "a") as file_log:
-                    for content in content_list:
-                        file_log.write(content)
+                if not csv_mode:
+                    with open(f"{file_name}.txt", "a") as text_file:
+                        for contents in content_list:
+                            for content in contents:
+                                text_file.write(content)
+                            text_file.write('\n')
+                else:
+                    with open(f"{file_name}.csv", "a", ) as myfile:
+                        wr = csv.writer(myfile, quoting=csv.QUOTE_ALL)
+                        for contents in content_list:
+                            for content in contents:
+                                wr.writerow([content])
+
             except:
                 print("The latest log file failed, please try again.")
         
@@ -256,6 +268,7 @@ print("\n ---------")
 url_cap = 0
 full_output = []
 for href in valid_links:
+    current_output = []
     if url_cap < CAP:
         current_URL = Input_Handler.build_url(href)
         current_driver = Program_Manager.setup_chrome_drivers()
@@ -265,11 +278,12 @@ for href in valid_links:
         target_element = new_soup.find(element, class_=user_class)
         if target_element != None and nested_element != "":
             for th in target_element.find_all(nested_element):
-                full_output.append(th.text)
+                current_output.append(th.text)
         else:
             print(DEBUG_HINT)
         current_driver.quit()
         url_cap += 1
+    full_output.append(current_output)
 File_Handler.add_all_info(full_output)
 Input_Handler.display_disclaimer(DOWNLOAD_HINT)
 
