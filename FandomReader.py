@@ -72,13 +72,48 @@ def get_current_time():
     current_timestamp = datetime.datetime.now()
     return str(current_timestamp)
 
+'''
+    The file manager class manages all related input and output
+'''
+class FileManager():
+        def __init__(self) -> None:
+            self.__full_output_list = []
+        '''
+            add_info that appends text to a special log, designed to be the desired output of the system.
+        '''
+        def add_all_info(self, info_list:list):
+            self.__full_output_list = info_list
+            self.__write_output(self.__full_output_list)
+    
+        '''
+            __write_special_log writes the desired output of the system to a file.
+        '''
+        def __write_output(self, text_list:list):
+            self.create_open_file(TARGET_OUTPUT_FILE, text_list)
+    
+        def clear_text_file(self, target_name: str):
+            with open(target_name, "w") as file_log:
+                file_log.write(f"{get_current_time()}\n")
+        '''
+            create_open_file is a function that opens, or creates a new .txt file, which it writes all the lines from iterating a list called list.
+        '''
+        def create_open_file(self, file_name:str, content_list: list):
+            try:
+                with open(file_name, "a") as file_log:
+                    for content in content_list:
+                        file_log.write(content)
+            except:
+                print("The latest log file failed, please try again.")
+        
+
+
 """
-This logger class handles file I/O while documenting actions to ensure the program is running smoothly (will be particularly helpful for user input)
+This logger class handles documenting actions to ensure the program is running smoothly (will be particularly helpful for user input)
 """
 class Logger():
-    def __init__(self) -> None:
+    def __init__(self, file_manager: FileManager) -> None:
         self.__full_logs = []
-        self.__special_info = []
+        self.__file_manager = file_manager
 
     '''
     add_log is a function that appends a message and timestamps it
@@ -87,40 +122,16 @@ class Logger():
         log_text = f"Log Action: {get_current_time} - {text}"
         self.__full_logs.append(log_text)
 
-    '''
-        create_open_file is a function that opens, or creates a new .txt file, which it writes all the lines from iterating a list called list.
-    '''
-    def create_open_file(self, file_name:str, location_dir: str, list: list):
-        try:
-            with open(file_name, "a") as file_log:
-                    file_log.write(list[-1])
-        except:
-            print("The latest log file failed, please try again.")
 
     '''
         write_log is a function that is designed for timestamp sensitive logs.
     '''
     def write_log(self):
-        self.create_open_file(f"{get_current_time}_fandom_log.txt", "/logs/", self.__full_logs)
+        self.__file_manager.create_open_file(f"/logs/{get_current_time}_fandom_log.txt", self.__full_logs)
 
-    '''
-        add_info that appends text to a special log, designed to be the desired output of the system.
-    '''
-    def add_info(self, text:str, subject:str):
-        self.__special_info.append(text)
-        self.__write_special_log(self.__special_info, subject)
 
-    '''
-        __write_special_log writes the desired output of the system to a file.
-    '''
-    def __write_special_log(self, text_list:list, subject:str):
-        self.create_open_file(TARGET_OUTPUT_FILE, "/info_output/", text_list)
 
-    def clear_text_file(self, target_name: str):
-        with open(target_name, "a") as file_log:
-            file_log.write(f"{get_current_time()}\n")
 '''
-
     This class handles all user input within the program
 '''
 class InputHandler():
@@ -183,9 +194,9 @@ class InputHandler():
             return f"https://{fandom}.fandom.com"
 
 
-
-Action_Logger = Logger()
-Action_Logger.clear_text_file(TARGET_OUTPUT_FILE)
+File_Handler = FileManager()
+Action_Logger = Logger(file_manager=File_Handler)
+File_Handler.clear_text_file(TARGET_OUTPUT_FILE)
 Input_Handler = InputHandler()
 
 FANDOM_HINT = "Please type the Fandom (the part before .fandom) that you want to read: "
@@ -201,6 +212,9 @@ END_HINT = "html ): "
 ASK_FOR_CLASS = "Is there a class that you would want to be selected (Y/N): "
 ASK_WHAT_CLASS = "What class would you like to select: "
 YES_NO = ["y", "n"]
+
+DEBUG_HINT = "No info to print, perhaps you mistyped the class?"
+DOWNLOAD_HINT = f"Remember to save your {TARGET_OUTPUT_FILE} elsewhere if you plan on re-running this program"
 
 soup = Input_Handler.handle_user_request(FANDOM_HINT)
 Input_Handler.display_disclaimer(f"The selected wiki [{Input_Handler.get_current_wiki()}] found a {END} page, \nto decrease the time it takes to read all pages, \nthe following prompt will ask for a substring of desired pages, \nplease enter one if applicable")
@@ -231,10 +245,10 @@ for link in soup.find_all('a'):
 # check
 print("\n ---------")
 url_cap = 0
+full_output = []
 for href in valid_links:
     if url_cap < CAP:
         current_URL = Input_Handler.build_url(href)
-        print(current_URL)
         current_driver = setup_chrome_drivers()
         delay_request(DELAY)
         current_driver.get(current_URL)
@@ -242,10 +256,12 @@ for href in valid_links:
         target_element = new_soup.find(element, class_=user_class)
         if target_element != None and nested_element != "":
             for th in target_element.find_all(nested_element):
-                Action_Logger.add_info(th.text, current_URL)
+                full_output.append(th.text)
         else:
-            print("No info to print")
+            print(DEBUG_HINT)
         current_driver.quit()
         url_cap += 1
+File_Handler.add_all_info(full_output)
+Input_Handler.display_disclaimer(DOWNLOAD_HINT)
 
     
