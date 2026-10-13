@@ -1,5 +1,5 @@
 # fandom-reader
-A tool that allows you to extract desired information from a fandom page of your liking. This allows you to target certain elements to grab the contents of only what you need!
+A tool that allows you to extract desired information from a fandom page of your liking. This allows you to target certain elements to grab the contents of only what you need! (Not all elements are supported, follow the instructions when run)
 
 ---
 
@@ -10,7 +10,8 @@ This project assumes that you have chromium installed on your computer, to downl
 
 Ensure that you save your output file (`output.txt` by default) elsewhere before re-running the program again.
 
-Please note that this will take a while, so feel free to do something else while this runs, you should also consider the amount of pages that must be read.
+Please note that this will take a while, so feel free to do something else while this runs, you should also consider the amount of pages that must be read. I recommend limiting other tasks being run on your operating system while this process is occuring.
+- Elements can vary per fandom, and such there is no guarantee this will work.
 
 ## License
 CC BY-SA
